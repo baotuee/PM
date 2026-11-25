@@ -1,0 +1,1541 @@
+<!DOCTYPE html>
+<html lang="vi" class="light">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MAS × Eco — Performance Command Center</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: { sans: ['Inter', 'system-ui', 'sans-serif'] }
+        }
+      }
+    };
+  </script>
+  <style>
+    body { font-family: 'Inter', system-ui, sans-serif; }
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-thumb { background: rgba(148, 163, 184, 0.45); border-radius: 9999px; }
+    .no-select { user-select: none; -webkit-user-select: none; }
+  </style>
+</head>
+<body class="bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100 min-h-screen antialiased">
+
+  <!-- Login / Workspace Gate Overlay -->
+  <div id="auth-gate" class="fixed inset-0 z-[70] bg-slate-950/90 backdrop-blur-md flex items-center justify-center p-4 hidden">
+    <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl shadow-2xl w-full max-w-md p-6 sm:p-7 space-y-5">
+      <div class="flex items-center gap-3">
+        <div class="w-11 h-11 rounded-2xl bg-gradient-to-br from-indigo-600 to-emerald-500 flex items-center justify-center text-white font-extrabold text-base shadow-md">M×E</div>
+        <div>
+          <h2 class="text-base font-extrabold">MAS × Eco Command Center</h2>
+          <p class="text-xs text-slate-500">Đăng nhập bằng từ khóa Web App URL &amp; mật khẩu cá nhân</p>
+        </div>
+      </div>
+
+      <div id="auth-gate-body"></div>
+    </div>
+  </div>
+
+  <!-- App Shell -->
+  <div id="app-shell" class="flex min-h-screen w-full">
+    <!-- Mobile Sidebar Overlay -->
+    <div id="sidebar-overlay" class="fixed inset-0 bg-slate-900/50 z-30 hidden lg:hidden" onclick="toggleMobileSidebar(false)"></div>
+
+    <!-- Sidebar -->
+    <aside id="sidebar" class="fixed lg:sticky top-0 left-0 z-40 h-screen w-64 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 flex flex-col justify-between transition-transform duration-200 -translate-x-full lg:translate-x-0 shrink-0">
+      <div class="p-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
+        <div class="flex items-center gap-2.5">
+          <div class="w-8 h-8 rounded-xl bg-gradient-to-br from-indigo-600 to-emerald-500 flex items-center justify-center text-white font-extrabold text-xs shadow-sm">M×E</div>
+          <div>
+            <div class="text-xs font-extrabold tracking-tight">MAS × Eco</div>
+            <div class="text-[10px] text-slate-400">Command Center</div>
+          </div>
+        </div>
+        <button onclick="toggleMobileSidebar(false)" class="lg:hidden p-1.5 rounded-lg text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800">
+          <i data-lucide="x" class="w-4 h-4"></i>
+        </button>
+      </div>
+
+      <!-- Navigation -->
+      <nav id="sidebar-nav" class="flex-1 p-3 space-y-1 overflow-y-auto"></nav>
+
+      <!-- Bottom Utilities -->
+      <div class="p-3 border-t border-slate-100 dark:border-slate-800 space-y-2">
+        <div id="cloud-sync-badge" class="px-2.5 py-1 rounded-lg bg-slate-50 dark:bg-slate-800/70 text-[10px] text-slate-500 flex items-center justify-between">
+          <span>Cloud Auto-Save</span>
+          <span id="cloud-sync-time" class="font-semibold text-emerald-600 dark:text-emerald-400">Sẵn sàng</span>
+        </div>
+        <button onclick="openReportModal()" class="w-full px-3 py-2 rounded-xl bg-slate-900 dark:bg-white text-white dark:text-slate-900 text-xs font-semibold hover:opacity-90 flex items-center justify-center gap-2">
+          <i data-lucide="file-text" class="w-3.5 h-3.5"></i> 1-Click Report
+        </button>
+        <div class="grid grid-cols-2 gap-1.5">
+          <button id="btn-cloud-save" onclick="backupEcoToGoogleSheet()" class="px-2.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] font-semibold flex items-center justify-center gap-1" title="Lưu toàn bộ data Eco, Target, Tier Matrix & Task lên tab Workspace_Backup trên Google Sheet">
+            <i data-lucide="cloud-upload" class="w-3 h-3"></i> Cloud Save
+          </button>
+          <button id="btn-cloud-load" onclick="restoreEcoFromGoogleSheet()" class="px-2.5 py-1.5 rounded-xl border border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-300 text-[11px] font-semibold hover:bg-emerald-50 dark:hover:bg-emerald-950/40 flex items-center justify-center gap-1" title="Khôi phục toàn bộ data Eco & Workspace từ Google Sheet">
+            <i data-lucide="cloud-download" class="w-3 h-3"></i> Restore
+          </button>
+        </div>
+        <div class="grid grid-cols-2 gap-1.5">
+          <button onclick="exportJson()" class="px-2.5 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 text-[11px] font-medium hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center justify-center gap-1">
+            <i data-lucide="download" class="w-3 h-3"></i> Export
+          </button>
+          <label class="px-2.5 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 text-[11px] font-medium hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center justify-center gap-1 cursor-pointer">
+            <i data-lucide="upload" class="w-3 h-3"></i> Import
+            <input type="file" accept=".json" onchange="importJson(event)" class="hidden" />
+          </label>
+        </div>
+        <div class="flex items-center justify-between pt-1">
+          <button onclick="toggleTheme()" class="px-2.5 py-1.5 rounded-xl text-[11px] font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center gap-1.5">
+            <i id="theme-icon" data-lucide="moon" class="w-3.5 h-3.5"></i>
+            <span id="theme-label">Dark Mode</span>
+          </button>
+          <div class="flex items-center gap-1">
+            <button onclick="openAuthSettingsModal()" class="px-2 py-1.5 rounded-xl text-[11px] font-medium text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-950/40" title="Đổi từ khóa URL / Mật khẩu">
+              Tài khoản
+            </button>
+            <button onclick="logoutWorkspace()" class="px-2 py-1.5 rounded-xl text-[11px] font-medium text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800" title="Khóa màn hình">
+              Khóa
+            </button>
+            <button id="btn-clear-mock" onclick="confirmClearMock()" class="px-2 py-1.5 rounded-xl text-[11px] font-medium text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40">
+              Xóa mẫu
+            </button>
+          </div>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Main Content -->
+    <div class="flex-1 flex flex-col min-w-0">
+      <!-- Top Header -->
+      <header class="sticky top-0 z-30 bg-white/85 dark:bg-slate-900/85 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 px-4 sm:px-6 py-3 flex items-center justify-between gap-3">
+        <div class="flex items-center gap-3 min-w-0">
+          <button onclick="toggleMobileSidebar(true)" class="lg:hidden p-2 rounded-xl border border-slate-200 dark:border-slate-700">
+            <i data-lucide="menu" class="w-4 h-4"></i>
+          </button>
+          <div class="min-w-0">
+            <h1 id="page-title" class="text-base sm:text-lg font-bold truncate">Command Center</h1>
+            <p id="page-subtitle" class="text-xs text-slate-500 truncate">Tổng quan vận hành song song MAS & Eco</p>
+          </div>
+        </div>
+        <div class="flex items-center gap-2 shrink-0">
+          <button onclick="openQuickTaskModal()" class="px-3.5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold flex items-center gap-1.5 shadow-xs">
+            <i data-lucide="plus" class="w-3.5 h-3.5"></i>
+            <span class="hidden sm:inline">Thêm Task</span>
+          </button>
+        </div>
+      </header>
+
+      <!-- Dynamic Workspace Root -->
+      <main id="app-main" class="flex-1 p-4 sm:p-6 max-w-[1440px] w-full mx-auto"></main>
+    </div>
+  </div>
+
+  <!-- Custom Modal Container -->
+  <div id="modal-backdrop" class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs hidden items-center justify-center p-4" onclick="if(event.target === this) closeModal()">
+    <div id="modal-box" class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto p-5"></div>
+  </div>
+
+  <!-- Toast Container -->
+  <div id="toast-container" class="fixed bottom-4 right-4 z-[60] space-y-2 max-w-sm"></div>
+
+  <script>
+    // =========================================================================
+    // 1. CONSTANTS, AUTH & CORE STATE MANAGEMENT
+    // =========================================================================
+    const STORAGE_KEY = 'mas_eco_command_center_v3';
+    const AUTH_KEY = 'mas_eco_auth_v1';
+    const SAVED_URL_KEY = 'mas_eco_saved_webapp_url';
+    const DEFAULT_WEB_APP_URL = '';
+
+    const FLIGHTING_STREAMS = [
+      { id: 'oap_skin_live', brand: 'OAP Skin', format: 'Livestream', isLive: true },
+      { id: 'lifebuoy_live', brand: 'Lifebuoy', format: 'Livestream', isLive: true },
+      { id: 'mny_cpd', brand: 'MNY', format: 'Video CPD', isLive: false },
+      { id: 'oap_cpd', brand: 'OAP', format: 'Video CPD', isLive: false }
+    ];
+
+    const TIER_META = {
+      BAU: { short: 'B', label: 'BAU', cls: 'bg-slate-200 text-slate-700 dark:bg-slate-700 dark:text-slate-200', badge: 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300' },
+      Campaign: { short: 'C', label: 'Campaign', cls: 'bg-sky-500 text-white', badge: 'bg-sky-100 text-sky-700 dark:bg-sky-950/60 dark:text-sky-300' },
+      Mega: { short: 'M', label: 'Mega', cls: 'bg-amber-500 text-white', badge: 'bg-amber-100 text-amber-700 dark:bg-amber-950/60 dark:text-amber-300' },
+      SMG: { short: 'S', label: 'SMG', cls: 'bg-rose-600 text-white', badge: 'bg-rose-100 text-rose-700 dark:bg-rose-950/60 dark:text-rose-300' },
+      Off: { short: '—', label: 'Off', cls: 'bg-slate-100 text-slate-400 dark:bg-slate-800/50 dark:text-slate-600', badge: 'bg-slate-100 text-slate-400 dark:bg-slate-800 dark:text-slate-500' }
+    };
+
+    let isPaintingTier = false;
+    let ecoLiveCsvState = {
+      brand: 'OAP Skin',
+      tierFilter: 'ALL',
+      filename: '',
+      rows: [],
+      benchmarks: {},
+      trafficImg: '',
+      trafficOcrStatus: '',
+      trafficInsights: [],
+      productImg: '',
+      productOcrStatus: '',
+      productInsights: []
+    };
+
+    function getCurrentMonthKey() {
+      const d = new Date();
+      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+    }
+
+    function offsetDate(days) {
+      const d = new Date();
+      d.setDate(d.getDate() + days);
+      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    }
+
+    function formatDateISO(d) {
+      if (!(d instanceof Date) || isNaN(d.getTime())) return '';
+      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    }
+
+    function normalizeDateToISO(raw) {
+      if (!raw) return '';
+      const s = String(raw).trim().split(' ')[0];
+      if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+      const m = s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/);
+      if (m) {
+        const dd = m[1].padStart(2, '0');
+        const mm = m[2].padStart(2, '0');
+        return `${m[3]}-${mm}-${dd}`;
+      }
+      return '';
+    }
+
+    function parseCsvNumber(val) {
+      if (typeof val === 'number') return isNaN(val) ? 0 : val;
+      if (!val) return 0;
+      let s = String(val).trim().replace(/[₫$%\s]/g, '');
+      if (!s || s === '—' || s === '-') return 0;
+      if (s.includes('.') && s.includes(',')) {
+        if (s.lastIndexOf(',') > s.lastIndexOf('.')) {
+          s = s.replace(/\./g, '').replace(',', '.');
+        } else {
+          s = s.replace(/,/g, '');
+        }
+      } else if (s.includes('.')) {
+        if (/^\d{1,3}(\.\d{3}){2,}$/.test(s)) s = s.replace(/\./g, '');
+      } else if (s.includes(',')) {
+        if (/^\d{1,3}(,\d{3}){2,}$/.test(s)) s = s.replace(/,/g, '');
+        else s = s.replace(',', '.');
+      }
+      const n = parseFloat(s);
+      return isNaN(n) ? 0 : n;
+    }
+
+    function formatVnd(n) {
+      const num = Number(n) || 0;
+      if (Math.abs(num) >= 1e9) return (num / 1e9).toFixed(2) + ' tỷ';
+      if (Math.abs(num) >= 1e6) return (num / 1e6).toFixed(1) + ' tr';
+      return Math.round(num).toLocaleString('vi-VN') + ' đ';
+    }
+
+    function escapeHtml(str) {
+      return String(str ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    }
+
+    function parseDelimitedLine(line, sep) {
+      if (sep === '\t') return line.split('\t').map((c) => c.trim());
+      const out = [];
+      let cur = '';
+      let inQ = false;
+      for (let i = 0; i < line.length; i++) {
+        const ch = line[i];
+        if (ch === '"') inQ = !inQ;
+        else if (ch === sep && !inQ) { out.push(cur.trim()); cur = ''; }
+        else cur += ch;
+      }
+      out.push(cur.trim());
+      return out;
+    }
+
+    function createDefaultState(withSample = true) {
+      const mk = getCurrentMonthKey();
+      const savedUrl = localStorage.getItem(SAVED_URL_KEY) || DEFAULT_WEB_APP_URL;
+      return {
+        theme: 'light',
+        activeTab: 'overview',
+        masSubTab: 'perf',
+        ecoSubTab: 'live_deepdive',
+        liveViewDate: offsetDate(0),
+        ecoTrackingMonth: mk,
+        ecoMonthlyTargets: {},
+        ecoDailyActuals: {},
+        ecoPlanShots: {},
+        ecoLiveSaved: { brand: 'OAP Skin', byBrand: {} },
+        lastCloudBackup: '',
+        masSheetConfig: {
+          sheetUrl: 'https://docs.google.com/spreadsheets/d/1ZJMMM1XWIQvBzMzha3qMEJgU0QaTpf6FWf1s5BUBDRk/edit',
+          webAppUrl: savedUrl,
+          lastSync: '',
+          summaryRows: [],
+          deepdive: {}
+        },
+        tasks: withSample ? [
+          { id: 't1', title: 'Review FB & Google Ads Intraday Today', project: 'MAS', tag: 'Ads', status: 'Doing', priority: 'High', due: offsetDate(0), focus: true, done: false },
+          { id: 't2', title: 'Chốt budget rephasing OAP Skin & Lifebuoy', project: 'Eco', tag: 'Live', status: 'To Do', priority: 'High', due: offsetDate(0), focus: true, done: false }
+        ] : [],
+        masContent: withSample ? [
+          { id: 'c1', title: 'Angle: Live Arrival Guarantee 100% AU', channel: 'FB Ads', status: 'In Production', deadline: offsetDate(2), link: '' }
+        ] : [],
+        ecoTracking: [
+          { id: 'et1', brand: 'OAP Skin', format: 'Livestream', target: 792356008, spend: 0, revenue: 0, maxCir: 14.6 },
+          { id: 'et2', brand: 'Lifebuoy', format: 'Livestream', target: 3245884902, spend: 0, revenue: 0, maxCir: 13.5 },
+          { id: 'et3', brand: 'MNY', format: 'Video CPD', target: 2153742912, spend: 0, revenue: 0, maxCir: 7.3 },
+          { id: 'et4', brand: 'OAP', format: 'Video CPD', target: 2333699391, spend: 0, revenue: 0, maxCir: 7.3 }
+        ],
+        ecoLiveSnapshots: [],
+        ecoLiveLogs: [],
+        ecoIssues: withSample ? [
+          { id: 'ei1', channel: 'Lifebuoy — Livestream', issue: 'Pacing 47.4% & CIR 14.7% (> Trần 13.5%)', rootCause: 'CPM ngày BAU tăng, CTOR khung chiều thấp', nextAction: 'Dồn budget vào ngày Mega/SMG & ghim Hero SKU', pic: 'Squad Ads', status: 'Open' }
+        ] : [],
+        flighting: {
+          monthKey: mk,
+          activeBrush: 'Mega',
+          grid: {},
+          liveHours: {
+            oap_skin_live: { BAU: '10h-14h, 19h-23h', Campaign: '9h-15h, 18h-24h', Mega: '0h-2h, 9h-24h', SMG: '24/24h' },
+            lifebuoy_live: { BAU: '10h-14h, 19h-23h', Campaign: '9h-15h, 18h-24h', Mega: '0h-2h, 9h-24h', SMG: '24/24h' }
+          },
+          customHours: {}
+        },
+        scheduleBlocks: [
+          { id: 'sb1', day: 1, project: 'MAS', time: '09:00 - 11:00', title: 'Check MER, FB/GG ROAS & Search Terms' },
+          { id: 'sb2', day: 1, project: 'Eco', time: '14:00 - 16:00', title: 'Review Live CSV & Rephase Budget' }
+        ],
+        recurringTasks: [
+          { id: 'rt1', title: 'Sync MAS Summary & kiểm tra Keyword lỗ', schedule: 'Hàng ngày', done: false },
+          { id: 'rt2', title: 'Cập nhật CSV Livestream & đối soát CIR trần', schedule: 'Hàng ngày', done: false }
+        ]
+      };
+    }
+
+    let state = (() => {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          const base = createDefaultState(false);
+          const merged = { ...base, ...parsed };
+          if (!merged.masSheetConfig.webAppUrl) {
+            merged.masSheetConfig.webAppUrl = localStorage.getItem(SAVED_URL_KEY) || DEFAULT_WEB_APP_URL;
+          }
+          return merged;
+        }
+      } catch (e) {}
+      return createDefaultState(true);
+    })();
+
+    if (state.ecoLiveSaved) {
+      ecoLiveCsvState.brand = state.ecoLiveSaved.brand || 'OAP Skin';
+      const bSaved = state.ecoLiveSaved.byBrand?.[ecoLiveCsvState.brand] || state.ecoLiveSaved;
+      ecoLiveCsvState.filename = bSaved.filename || '';
+      ecoLiveCsvState.rows = bSaved.rows || [];
+      ecoLiveCsvState.benchmarks = bSaved.benchmarks || {};
+      ecoLiveCsvState.trafficInsights = bSaved.trafficInsights || [];
+      ecoLiveCsvState.productInsights = bSaved.productInsights || [];
+    }
+
+    function updateCloudSyncBadge(text, busy = false) {
+      const el = document.getElementById('cloud-sync-time');
+      if (!el) return;
+      el.textContent = text;
+      el.className = busy
+        ? 'font-semibold text-amber-600 dark:text-amber-400'
+        : 'font-semibold text-emerald-600 dark:text-emerald-400';
+    }
+
+    function saveState(skipCloud = false) {
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+        if (state.masSheetConfig?.webAppUrl) {
+          localStorage.setItem(SAVED_URL_KEY, state.masSheetConfig.webAppUrl);
+        }
+      } catch (e) {}
+      if (!skipCloud && typeof autoCloudSaveSilent === 'function') {
+        autoCloudSaveSilent();
+      }
+    }
+
+    function getTierForDate(streamId, dateIso) {
+      const custom = state.flighting?.grid?.[streamId]?.[dateIso];
+      if (custom) return custom;
+      const day = Number((dateIso || '').slice(8, 10));
+      if (!day) return 'BAU';
+      if ([21, 22, 23].includes(day)) return 'SMG';
+      if ([9, 10, 11, 24, 25, 26, 27].includes(day)) return 'Mega';
+      if ([6, 7, 8, 12, 13, 14, 15].includes(day)) return 'Campaign';
+      return 'BAU';
+    }
+
+    // =========================================================================
+    // 2. AUTH GATE (KEYWORD ALIAS + PASSWORD) & UI HELPERS
+    // =========================================================================
+    let isSessionUnlocked = sessionStorage.getItem('mas_eco_unlocked') === '1';
+    let lastAutoPullTs = 0;
+
+    function getAuthConfig() {
+      try {
+        return JSON.parse(localStorage.getItem(AUTH_KEY) || 'null');
+      } catch (e) {
+        return null;
+      }
+    }
+
+    function renderAuthGate() {
+      const gate = document.getElementById('auth-gate');
+      const body = document.getElementById('auth-gate-body');
+      if (!gate || !body) return;
+
+      if (isSessionUnlocked) {
+        gate.classList.add('hidden');
+        return;
+      }
+
+      gate.classList.remove('hidden');
+      const cfg = getAuthConfig();
+      const savedUrl = (cfg && cfg.url) || state.masSheetConfig?.webAppUrl || localStorage.getItem(SAVED_URL_KEY) || '';
+
+      if (!cfg) {
+        body.innerHTML = `
+          <form onsubmit="submitFirstTimeSetup(event)" class="space-y-3.5">
+            <div class="p-3 rounded-xl bg-indigo-50 dark:bg-indigo-950/40 text-xs text-indigo-800 dark:text-indigo-200 leading-relaxed">
+              Thiết lập khóa bảo mật cho thiết bị này. Nếu bạn đã dùng trên máy khác, hãy nhập đúng <b>Web App URL</b> và <b>Mật khẩu</b> cũ để tự động tải dữ liệu Cloud.
+            </div>
+            <div>
+              <label class="block text-xs font-semibold mb-1">Từ khóa đăng nhập (Alias / Tên gợi nhớ)</label>
+              <input id="setup-alias" type="text" required placeholder="VD: mas_eco_admin" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-xs outline-none focus:ring-2 focus:ring-indigo-500" />
+            </div>
+            <div>
+              <label class="block text-xs font-semibold mb-1">Google Apps Script Web App URL</label>
+              <input id="setup-url" type="url" value="${escapeHtml(savedUrl)}" placeholder="https://script.google.com/macros/s/.../exec" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-xs outline-none focus:ring-2 focus:ring-indigo-500" />
+            </div>
+            <div>
+              <label class="block text-xs font-semibold mb-1">Mật khẩu truy cập</label>
+              <input id="setup-pass" type="password" required placeholder="Nhập mật khẩu..." class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-xs outline-none focus:ring-2 focus:ring-indigo-500" />
+            </div>
+            <button type="submit" class="w-full py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold shadow-md">
+              Lưu &amp; Mở khóa Workspace
+            </button>
+          </form>
+        `;
+      } else {
+        body.innerHTML = `
+          <form onsubmit="submitWorkspaceLogin(event)" class="space-y-3.5">
+            <div>
+              <label class="block text-xs font-semibold mb-1">Từ khóa đăng nhập hoặc Web App URL</label>
+              <input id="login-user" type="text" required value="${escapeHtml(cfg.alias || '')}" placeholder="Nhập từ khóa hoặc dán Web App URL..." class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-xs outline-none focus:ring-2 focus:ring-indigo-500" />
+            </div>
+            <div>
+              <label class="block text-xs font-semibold mb-1">Mật khẩu</label>
+              <input id="login-pass" type="password" required placeholder="Nhập mật khẩu..." class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-xs outline-none focus:ring-2 focus:ring-indigo-500" />
+            </div>
+            <button type="submit" class="w-full py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold shadow-md">
+              Mở khóa Command Center
+            </button>
+            <div class="text-center pt-1">
+              <button type="button" onclick="resetLocalAuth()" class="text-[11px] text-slate-400 hover:text-rose-500 underline">
+                Thiết lập lại từ khóa / URL trên máy này
+              </button>
+            </div>
+          </form>
+        `;
+      }
+    }
+
+    function resetLocalAuth() {
+      localStorage.removeItem(AUTH_KEY);
+      renderAuthGate();
+    }
+
+    function submitFirstTimeSetup(e) {
+      e.preventDefault();
+      const alias = document.getElementById('setup-alias').value.trim();
+      const url = document.getElementById('setup-url').value.trim();
+      const pass = document.getElementById('setup-pass').value;
+      if (!alias || !pass) return;
+
+      localStorage.setItem(AUTH_KEY, JSON.stringify({ alias, url, pass }));
+      if (url) {
+        state.masSheetConfig.webAppUrl = url;
+        localStorage.setItem(SAVED_URL_KEY, url);
+      }
+      isSessionUnlocked = true;
+      sessionStorage.setItem('mas_eco_unlocked', '1');
+      saveState(true);
+      renderAuthGate();
+      render();
+      if (url) {
+        lastAutoPullTs = Date.now();
+        syncMasFromGoogleSheet(true).then(() => backupEcoToGoogleSheet(true));
+      }
+    }
+
+    async function submitWorkspaceLogin(e) {
+      e.preventDefault();
+      const userVal = document.getElementById('login-user').value.trim();
+      const passVal = document.getElementById('login-pass').value;
+      const cfg = getAuthConfig();
+      const isUrl = /^https:\/\/script\.google\.com\//i.test(userVal);
+
+      if (isUrl && (!cfg || !cfg.pass)) {
+        try {
+          const res = await fetch(`${userVal}?sheet=Workspace_Backup`);
+          const json = await res.json();
+          const cloudAuth = json?.payload?.authConfig;
+          if (cloudAuth && cloudAuth.pass && cloudAuth.pass !== passVal) {
+            showToast('Mật khẩu không khớp với bản lưu trên Google Sheet!', 'error');
+            return;
+          }
+          localStorage.setItem(AUTH_KEY, JSON.stringify({
+            alias: (cloudAuth && cloudAuth.alias) || 'mas_eco',
+            url: userVal,
+            pass: passVal
+          }));
+          state.masSheetConfig.webAppUrl = userVal;
+          localStorage.setItem(SAVED_URL_KEY, userVal);
+          isSessionUnlocked = true;
+          sessionStorage.setItem('mas_eco_unlocked', '1');
+          lastAutoPullTs = Date.now();
+          saveState(true);
+          renderAuthGate();
+          render();
+          await syncMasFromGoogleSheet(true);
+          showToast('Đã đăng nhập & đồng bộ toàn bộ dữ liệu từ Cloud!', 'success');
+          return;
+        } catch (err) {
+          showToast('Không kết nối được Web App URL này!', 'error');
+          return;
+        }
+      }
+
+      const userOk = isUrl || (cfg && userVal.toLowerCase() === String(cfg.alias || '').toLowerCase());
+      const passOk = cfg && passVal === cfg.pass;
+
+      if (!userOk || !passOk) {
+        showToast('Sai từ khóa đăng nhập hoặc mật khẩu!', 'error');
+        return;
+      }
+      const targetUrl = isUrl ? userVal : (cfg.url || state.masSheetConfig.webAppUrl);
+      if (targetUrl) {
+        state.masSheetConfig.webAppUrl = targetUrl;
+        localStorage.setItem(SAVED_URL_KEY, targetUrl);
+      }
+      isSessionUnlocked = true;
+      sessionStorage.setItem('mas_eco_unlocked', '1');
+      saveState(true);
+      renderAuthGate();
+      render();
+      if (targetUrl && Date.now() - lastAutoPullTs > 5 * 60 * 1000) {
+        lastAutoPullTs = Date.now();
+        syncMasFromGoogleSheet(true);
+      }
+    }
+
+    function openAuthSettingsModal() {
+      const cfg = getAuthConfig() || { alias: '', url: state.masSheetConfig.webAppUrl || '', pass: '' };
+      openModal(`
+        <div class="space-y-4">
+          <div class="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
+            <h3 class="text-sm font-bold">Cấu hình Tài khoản &amp; Web App URL</h3>
+            <button onclick="closeModal()" class="p-1 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800"><i data-lucide="x" class="w-4 h-4"></i></button>
+          </div>
+          <form onsubmit="saveAuthSettings(event)" class="space-y-3">
+            <div>
+              <label class="block text-xs font-semibold mb-1">Từ khóa đăng nhập (Alias)</label>
+              <input id="edit-auth-alias" type="text" required value="${escapeHtml(cfg.alias)}" class="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-xs" />
+            </div>
+            <div>
+              <label class="block text-xs font-semibold mb-1">Google Apps Script Web App URL</label>
+              <input id="edit-auth-url" type="url" value="${escapeHtml(cfg.url || state.masSheetConfig.webAppUrl || '')}" class="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-xs" />
+            </div>
+            <div>
+              <label class="block text-xs font-semibold mb-1">Mật khẩu mới</label>
+              <input id="edit-auth-pass" type="password" required value="${escapeHtml(cfg.pass)}" class="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-xs" />
+            </div>
+            <div class="flex justify-end gap-2 pt-2">
+              <button type="button" onclick="closeModal()" class="px-3.5 py-2 rounded-xl border border-slate-200 dark:border-slate-700 text-xs font-semibold">Hủy</button>
+              <button type="submit" class="px-4 py-2 rounded-xl bg-indigo-600 text-white text-xs font-semibold">Lưu cấu hình</button>
+            </div>
+          </form>
+        </div>
+      `);
+    }
+
+    function saveAuthSettings(e) {
+      e.preventDefault();
+      const alias = document.getElementById('edit-auth-alias').value.trim();
+      const url = document.getElementById('edit-auth-url').value.trim();
+      const pass = document.getElementById('edit-auth-pass').value;
+      localStorage.setItem(AUTH_KEY, JSON.stringify({ alias, url, pass }));
+      if (url) {
+        state.masSheetConfig.webAppUrl = url;
+        localStorage.setItem(SAVED_URL_KEY, url);
+      }
+      saveState();
+      closeModal();
+      showToast('Đã cập nhật tài khoản & đồng bộ lên Cloud!', 'success');
+    }
+
+    function logoutWorkspace() {
+      isSessionUnlocked = false;
+      sessionStorage.removeItem('mas_eco_unlocked');
+      renderAuthGate();
+    }
+
+    function showToast(msg, type = 'info') {
+      const box = document.getElementById('toast-container');
+      if (!box) return;
+      const el = document.createElement('div');
+      const colors = {
+        success: 'bg-emerald-600 text-white',
+        error: 'bg-rose-600 text-white',
+        info: 'bg-slate-900 text-white dark:bg-white dark:text-slate-900'
+      };
+      el.className = `px-4 py-2.5 rounded-xl shadow-lg text-xs font-semibold flex items-center gap-2 transition-all ${colors[type] || colors.info}`;
+      el.textContent = msg;
+      box.appendChild(el);
+      setTimeout(() => { el.style.opacity = '0'; setTimeout(() => el.remove(), 300); }, 3200);
+    }
+
+    function openModal(html) {
+      const backdrop = document.getElementById('modal-backdrop');
+      const box = document.getElementById('modal-box');
+      if (!backdrop || !box) return;
+      box.innerHTML = html;
+      backdrop.classList.remove('hidden');
+      backdrop.classList.add('flex');
+      if (window.lucide) lucide.createIcons();
+    }
+
+    function closeModal() {
+      const backdrop = document.getElementById('modal-backdrop');
+      if (!backdrop) return;
+      backdrop.classList.add('hidden');
+      backdrop.classList.remove('flex');
+    }
+
+    function toggleMobileSidebar(open) {
+      const sb = document.getElementById('sidebar');
+      const ov = document.getElementById('sidebar-overlay');
+      if (!sb || !ov) return;
+      if (open) {
+        sb.classList.remove('-translate-x-full');
+        ov.classList.remove('hidden');
+      } else {
+        sb.classList.add('-translate-x-full');
+        ov.classList.add('hidden');
+      }
+    }
+
+    function toggleTheme() {
+      state.theme = state.theme === 'dark' ? 'light' : 'dark';
+      applyTheme();
+      saveState(true);
+    }
+
+    function applyTheme() {
+      const isDark = state.theme === 'dark';
+      document.documentElement.classList.toggle('dark', isDark);
+      const lbl = document.getElementById('theme-label');
+      if (lbl) lbl.textContent = isDark ? 'Light Mode' : 'Dark Mode';
+    }
+
+    function confirmClearMock() {
+      openModal(`
+        <div class="space-y-4">
+          <h3 class="text-sm font-bold">Xóa dữ liệu mẫu ban đầu?</h3>
+          <p class="text-xs text-slate-500">Thao tác này sẽ xóa các task &amp; issue mẫu, giữ nguyên cấu hình Web App URL và dữ liệu đã đồng bộ.</p>
+          <div class="flex justify-end gap-2">
+            <button onclick="closeModal()" class="px-3.5 py-2 rounded-xl border border-slate-200 dark:border-slate-700 text-xs font-semibold">Hủy</button>
+            <button onclick="clearMockData()" class="px-4 py-2 rounded-xl bg-rose-600 text-white text-xs font-semibold">Xóa mẫu</button>
+          </div>
+        </div>
+      `);
+    }
+
+    function clearMockData() {
+      state.tasks = [];
+      state.masContent = [];
+      state.ecoIssues = [];
+      saveState();
+      closeModal();
+      render();
+      showToast('Đã xóa dữ liệu mẫu.', 'success');
+    }
+
+    function exportJson() {
+      const blob = new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = `mas_eco_backup_${offsetDate(0)}.json`;
+      a.click();
+    }
+
+    function importJson(e) {
+      const file = e.target.files?.[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = () => {
+        try {
+          const parsed = JSON.parse(reader.result);
+          state = { ...createDefaultState(false), ...parsed };
+          saveState();
+          render();
+          showToast('Đã khôi phục dữ liệu từ file JSON!', 'success');
+        } catch (err) {
+          showToast('File JSON không hợp lệ!', 'error');
+        }
+      };
+      reader.readAsText(file);
+    }
+
+    // =========================================================================
+    // 3. CLOUD SYNC (GOOGLE SHEETS WEB APP)
+    // =========================================================================
+    let cloudSaveTimer = null;
+    function autoCloudSaveSilent() {
+      if (!state.masSheetConfig?.webAppUrl) return;
+      clearTimeout(cloudSaveTimer);
+      cloudSaveTimer = setTimeout(() => backupEcoToGoogleSheet(true), 1800);
+    }
+
+    async function backupEcoToGoogleSheet(silent = false) {
+      const url = state.masSheetConfig?.webAppUrl;
+      if (!url) {
+        if (!silent) showToast('Chưa cấu hình Web App URL!', 'error');
+        return;
+      }
+      try {
+        updateCloudSyncBadge('Đang lưu...', true);
+        const payloadState = {
+          ...state,
+          masSheetConfig: {
+            sheetUrl: state.masSheetConfig.sheetUrl,
+            webAppUrl: url,
+            lastSync: state.masSheetConfig.lastSync
+          },
+          authConfig: getAuthConfig()
+        };
+        const res = await fetch(url, {
+          method: 'POST',
+          body: JSON.stringify({ note: 'Auto Backup', state: payloadState })
+        });
+        const json = await res.json();
+        if (json.ok) {
+          state.lastCloudBackup = json.savedAt;
+          updateCloudSyncBadge(json.savedAt.slice(11, 16), false);
+          if (!silent) showToast('Đã lưu toàn bộ dữ liệu lên Google Sheet!', 'success');
+        }
+      } catch (err) {
+        updateCloudSyncBadge('Lỗi lưu', false);
+        if (!silent) showToast('Lỗi lưu Cloud: ' + err.message, 'error');
+      }
+    }
+
+    async function restoreEcoFromGoogleSheet(silent = false) {
+      const url = state.masSheetConfig?.webAppUrl;
+      if (!url) {
+        if (!silent) showToast('Chưa cấu hình Web App URL!', 'error');
+        return;
+      }
+      try {
+        const res = await fetch(`${url}?sheet=Workspace_Backup`);
+        const json = await res.json();
+        if (json.payload) {
+          const keepSummary = state.masSheetConfig.summaryRows;
+          const keepDeep = state.masSheetConfig.deepdive;
+          state = {
+            ...state,
+            ...json.payload,
+            masSheetConfig: {
+              ...(json.payload.masSheetConfig || {}),
+              webAppUrl: url,
+              summaryRows: keepSummary,
+              deepdive: keepDeep
+            }
+          };
+          saveState(true);
+          render();
+          if (!silent) showToast('Đã khôi phục dữ liệu từ Cloud (' + (json.savedAt || '') + ')', 'success');
+        }
+      } catch (err) {
+        if (!silent) showToast('Không thể tải bản sao lưu Cloud.', 'error');
+      }
+    }
+
+    async function syncMasFromGoogleSheet(silent = false) {
+      const url = state.masSheetConfig?.webAppUrl;
+      if (!url) {
+        if (!silent) showToast('Vui lòng nhập Google Apps Script Web App URL!', 'error');
+        return;
+      }
+      const tabs = [
+        'MAS_Summary',
+        'FB_Ads',
+        'FB_Ads_Audience',
+        'FB_Ads_Demo',
+        'FB_Ads_Product',
+        'GG_Ads_Creative',
+        'GG_Ads_PMax',
+        'GG_Ads_Keyword',
+        'GG_Ads_Product',
+        'Shopify_Orders',
+        'GA4_Australia',
+        'Workspace_Backup'
+      ];
+      try {
+        if (!silent) showToast('Đang đồng bộ dữ liệu từ Google Sheet...', 'info');
+        const results = await Promise.all(
+          tabs.map((t) => fetch(`${url}?sheet=${encodeURIComponent(t)}`).then((r) => r.json()).catch(() => ({ sheet: t, rows: [] })))
+        );
+        const deepdive = {};
+        results.forEach((res) => {
+          if (res.sheet === 'MAS_Summary' && Array.isArray(res.rows)) {
+            state.masSheetConfig.summaryRows = res.rows;
+          } else if (res.sheet === 'Workspace_Backup' && res.payload) {
+            const p = res.payload;
+            if (Array.isArray(p.tasks)) state.tasks = p.tasks;
+            if (Array.isArray(p.ecoTracking)) state.ecoTracking = p.ecoTracking;
+            if (Array.isArray(p.ecoIssues)) state.ecoIssues = p.ecoIssues;
+            if (Array.isArray(p.scheduleBlocks)) state.scheduleBlocks = p.scheduleBlocks;
+            if (Array.isArray(p.recurringTasks)) state.recurringTasks = p.recurringTasks;
+            if (p.flighting) state.flighting = p.flighting;
+          } else if (res.sheet && Array.isArray(res.rows)) {
+            deepdive[res.sheet] = res.rows;
+          }
+        });
+        state.masSheetConfig.deepdive = deepdive;
+        state.masSheetConfig.lastSync = new Date().toLocaleString('vi-VN');
+        saveState(true);
+        render();
+        if (!silent) showToast('Đồng bộ MAS & Cloud hoàn tất!', 'success');
+      } catch (err) {
+        if (!silent) showToast('Lỗi đồng bộ: ' + err.message, 'error');
+      }
+    }
+
+    // =========================================================================
+    // 4. RENDER ENGINE (OVERVIEW, MAS, ECO, SCHEDULE, REPORT)
+    // =========================================================================
+    function render() {
+      renderSidebar();
+      const main = document.getElementById('app-main');
+      const titleEl = document.getElementById('page-title');
+      const subEl = document.getElementById('page-subtitle');
+      if (!main) return;
+
+      const tab = state.activeTab || 'overview';
+      if (tab === 'overview') {
+        titleEl.textContent = 'Command Center';
+        subEl.textContent = 'Tổng quan vận hành song song MAS & Eco';
+        main.innerHTML = renderOverview();
+      } else if (tab === 'mas') {
+        titleEl.textContent = 'Workspace MAS';
+        subEl.textContent = 'Micro Aquatic Shop AU — Paid Ads, Shopify CAC/LTV & GA4';
+        main.innerHTML = renderMas();
+      } else if (tab === 'eco') {
+        titleEl.textContent = 'Workspace Eco';
+        subEl.textContent = 'Ecommerce Livestream & Video CPD — Pacing, CIR & Flighting';
+        main.innerHTML = renderEco();
+      } else if (tab === 'schedule') {
+        titleEl.textContent = 'Lịch biểu tuần';
+        subEl.textContent = 'Time-block & Checklist lặp lại';
+        main.innerHTML = renderSchedule();
+      }
+      if (window.lucide) lucide.createIcons();
+    }
+
+    function renderSidebar() {
+      const nav = document.getElementById('sidebar-nav');
+      if (!nav) return;
+      const items = [
+        { id: 'overview', label: 'Command Center', icon: 'layout-dashboard' },
+        { id: 'mas', label: 'Workspace MAS', icon: 'trending-up' },
+        { id: 'eco', label: 'Workspace Eco', icon: 'shopping-bag' },
+        { id: 'schedule', label: 'Lịch biểu tuần', icon: 'calendar-clock' }
+      ];
+      nav.innerHTML = items.map((it) => {
+        const active = state.activeTab === it.id;
+        return `
+          <button onclick="switchTab('${it.id}')" class="w-full px-3 py-2.5 rounded-xl text-xs font-semibold flex items-center gap-2.5 transition-colors ${active ? 'bg-indigo-600 text-white shadow-xs' : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'}">
+            <i data-lucide="${it.icon}" class="w-4 h-4"></i>
+            <span>${it.label}</span>
+          </button>
+        `;
+      }).join('');
+    }
+
+    function switchTab(id) {
+      state.activeTab = id;
+      saveState(true);
+      toggleMobileSidebar(false);
+      render();
+    }
+
+    function getSummaryMetric(labelSub, colIdx = 3) {
+      const rows = state.masSheetConfig?.summaryRows || [];
+      const found = rows.find((r) => String(r[0] || '').toLowerCase().includes(labelSub.toLowerCase()));
+      return found ? (found[colIdx] || '—') : '—';
+    }
+
+    function renderOverview() {
+      const spend7d = getSummaryMetric('Total Paid Ads Spend', 3);
+      const gmv7d = getSummaryMetric('Total Shopify GMV', 3);
+      const mer7d = getSummaryMetric('Blended ROAS / MER', 3);
+      const orders7d = getSummaryMetric('Total Shopify Orders', 3);
+      const focusTasks = (state.tasks || []).filter((t) => !t.done);
+
+      return `
+        <div class="space-y-6">
+          <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+            <div class="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-800">
+              <div class="text-[11px] font-semibold text-slate-400">MAS Spend (L7D)</div>
+              <div class="text-xl font-extrabold text-indigo-600 mt-1">${escapeHtml(spend7d)}</div>
+            </div>
+            <div class="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-800">
+              <div class="text-[11px] font-semibold text-slate-400">MAS Shopify GMV (L7D)</div>
+              <div class="text-xl font-extrabold text-emerald-600 mt-1">${escapeHtml(gmv7d)}</div>
+            </div>
+            <div class="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-800">
+              <div class="text-[11px] font-semibold text-slate-400">Blended MER (L7D)</div>
+              <div class="text-xl font-extrabold mt-1">${escapeHtml(mer7d)}</div>
+            </div>
+            <div class="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-800">
+              <div class="text-[11px] font-semibold text-slate-400">Shopify Orders (L7D)</div>
+              <div class="text-xl font-extrabold mt-1">${escapeHtml(orders7d)}</div>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            <div class="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200 dark:border-slate-800 space-y-3">
+              <div class="flex items-center justify-between">
+                <h2 class="text-sm font-bold">Focus Tasks hôm nay (${focusTasks.length})</h2>
+                <button onclick="openQuickTaskModal()" class="text-xs font-semibold text-indigo-600 hover:underline">+ Thêm Task</button>
+              </div>
+              <div class="divide-y divide-slate-100 dark:divide-slate-800">
+                ${focusTasks.length ? focusTasks.map((t) => `
+                  <div class="py-2.5 flex items-center justify-between gap-2">
+                    <label class="flex items-center gap-2.5 cursor-pointer min-w-0">
+                      <input type="checkbox" onchange="toggleTaskDone('${t.id}')" class="w-4 h-4 rounded accent-indigo-600" />
+                      <span class="text-xs font-medium truncate">${escapeHtml(t.title)}</span>
+                    </label>
+                    <span class="px-2 py-0.5 rounded-md text-[10px] font-bold ${t.project === 'MAS' ? 'bg-indigo-100 text-indigo-700' : 'bg-emerald-100 text-emerald-700'}">${escapeHtml(t.project)}</span>
+                  </div>
+                `).join('') : '<p class="text-xs text-slate-400 py-4 text-center">Không có task tồn đọng.</p>'}
+              </div>
+            </div>
+
+            <div class="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200 dark:border-slate-800 space-y-3">
+              <div class="flex items-center justify-between">
+                <h2 class="text-sm font-bold">Eco Tracking Summary</h2>
+                <button onclick="switchTab('eco')" class="text-xs font-semibold text-emerald-600 hover:underline">Mở Eco →</button>
+              </div>
+              <div class="space-y-2.5">
+                ${(state.ecoTracking || []).map((row) => {
+                  const pct = row.target > 0 ? Math.min(100, Math.round((row.revenue / row.target) * 100)) : 0;
+                  return `
+                    <div class="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/60 space-y-1.5">
+                      <div class="flex justify-between text-xs font-semibold">
+                        <span>${escapeHtml(row.brand)} (${escapeHtml(row.format)})</span>
+                        <span>${pct}% • ${formatVnd(row.revenue)} / ${formatVnd(row.target)}</span>
+                      </div>
+                      <div class="w-full h-1.5 bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden">
+                        <div class="h-full bg-emerald-500 rounded-full" style="width:${pct}%"></div>
+                      </div>
+                    </div>
+                  `;
+                }).join('')}
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    function renderMas() {
+      const sub = state.masSubTab || 'perf';
+      const url = state.masSheetConfig?.webAppUrl || '';
+      const lastSync = state.masSheetConfig?.lastSync || 'Chưa đồng bộ';
+
+      return `
+        <div class="space-y-5">
+          <div class="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
+            <div class="flex flex-wrap items-center gap-2">
+              <button onclick="setMasSubTab('perf')" class="px-3.5 py-2 rounded-xl text-xs font-semibold ${sub === 'perf' ? 'bg-indigo-600 text-white' : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300'}">Executive Summary</button>
+              <button onclick="setMasSubTab('deepdive')" class="px-3.5 py-2 rounded-xl text-xs font-semibold ${sub === 'deepdive' ? 'bg-indigo-600 text-white' : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300'}">Deepdive &amp; Optimize</button>
+              <button onclick="setMasSubTab('shopify')" class="px-3.5 py-2 rounded-xl text-xs font-semibold ${sub === 'shopify' ? 'bg-indigo-600 text-white' : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300'}">Shopify Product &amp; Mix Cart</button>
+            </div>
+            <div class="flex items-center gap-2">
+              <span class="text-[11px] text-slate-400">Sync: ${escapeHtml(lastSync)}</span>
+              <button onclick="syncMasFromGoogleSheet(false)" class="px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold flex items-center gap-1.5">
+                <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i> Sync Data MAS ngay
+              </button>
+            </div>
+          </div>
+
+          ${!url ? `
+            <div class="bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 p-4 rounded-2xl flex flex-col sm:flex-row items-center justify-between gap-3">
+              <div class="text-xs text-amber-800 dark:text-amber-200">Chưa kết nối Google Apps Script Web App URL.</div>
+              <button onclick="openAuthSettingsModal()" class="px-3.5 py-2 rounded-xl bg-amber-600 text-white text-xs font-semibold">Cấu hình URL ngay</button>
+            </div>
+          ` : ''}
+
+          ${sub === 'perf' ? renderMasSummaryTable() : sub === 'deepdive' ? renderMasDeepdive() : renderMasShopifyMix()}
+        </div>
+      `;
+    }
+
+    function setMasSubTab(t) {
+      state.masSubTab = t;
+      saveState(true);
+      render();
+    }
+
+    function renderMasSummaryTable() {
+      const rows = state.masSheetConfig?.summaryRows || [];
+      if (rows.length < 4) {
+        return `<div class="bg-white dark:bg-slate-900 p-8 rounded-2xl border border-slate-200 dark:border-slate-800 text-center text-xs text-slate-400">Chưa có dữ liệu MAS_Summary. Hãy bấm <b>Sync Data MAS ngay</b>.</div>`;
+      }
+      const header = rows[3] || [];
+      const bodyRows = rows.slice(4);
+      return `
+        <div class="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 overflow-x-auto">
+          <table class="w-full text-left border-collapse text-xs">
+            <thead>
+              <tr class="bg-slate-50 dark:bg-slate-800/70 border-b border-slate-200 dark:border-slate-800">
+                ${header.map((h, i) => `<th class="py-3 px-4 font-bold ${i > 0 && i < 6 ? 'text-right' : ''}">${escapeHtml(h)}</th>`).join('')}
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
+              ${bodyRows.map((r) => {
+                const isSection = !r[1] && !r[2] && !r[3];
+                if (isSection) {
+                  return `<tr class="bg-indigo-50/70 dark:bg-indigo-950/30"><td colspan="7" class="py-2.5 px-4 font-extrabold text-indigo-900 dark:text-indigo-200">${escapeHtml(r[0])}</td></tr>`;
+                }
+                return `
+                  <tr class="hover:bg-slate-50 dark:hover:bg-slate-800/40">
+                    ${r.map((cell, i) => `<td class="py-2.5 px-4 ${i > 0 && i < 6 ? 'text-right font-semibold' : ''}">${escapeHtml(cell)}</td>`).join('')}
+                  </tr>
+                `;
+              }).join('')}
+            </tbody>
+          </table>
+        </div>
+      `;
+    }
+
+    let activeDeepdiveTab = 'FB_Ads_Audience';
+    function setDeepdiveTab(t) {
+      activeDeepdiveTab = t;
+      render();
+    }
+
+    function renderMasDeepdive() {
+      const dd = state.masSheetConfig?.deepdive || {};
+      const sources = [
+        { key: 'FB_Ads_Audience', label: 'FB Audience & Placement' },
+        { key: 'FB_Ads', label: 'FB Creative' },
+        { key: 'FB_Ads_Demo', label: 'FB Age × Gender' },
+        { key: 'GG_Ads_Creative', label: 'GG Search Creative' },
+        { key: 'GG_Ads_PMax', label: 'GG (PMax Assets)' },
+        { key: 'GG_Ads_Keyword', label: 'GG Keywords' },
+        { key: 'GG_Ads_Product', label: 'GG Shopping SKU' }
+      ];
+      const raw = dd[activeDeepdiveTab] || [];
+      const dataRows = raw.slice(1);
+      const agg = {};
+      dataRows.forEach((r) => {
+        const name = String(r[3] || r[2] || '').trim();
+        const camp = String(r[1] || '').trim();
+        if (!name) return;
+        const key = `${name}__${camp}`;
+        if (!agg[key]) agg[key] = { name, camp, spend: 0, imp: 0, clicks: 0, conv: 0, gmv: 0 };
+        agg[key].spend += parseCsvNumber(r[4]);
+        agg[key].imp += parseCsvNumber(r[5]);
+        agg[key].clicks += parseCsvNumber(r[6]);
+        agg[key].conv += parseCsvNumber(r[7]);
+        agg[key].gmv += parseCsvNumber(r[8]);
+      });
+
+      const list = Object.values(agg).sort((a, b) => b.spend - a.spend).slice(0, 60);
+
+      return `
+        <div class="space-y-4">
+          <div class="flex flex-wrap gap-1.5">
+            ${sources.map((s) => `
+              <button onclick="setDeepdiveTab('${s.key}')" class="px-3 py-1.5 rounded-xl text-xs font-semibold ${activeDeepdiveTab === s.key ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900' : 'bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800'}">${s.label}</button>
+            `).join('')}
+          </div>
+          <div class="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 overflow-x-auto">
+            <table class="w-full text-left border-collapse text-xs">
+              <thead>
+                <tr class="bg-slate-50 dark:bg-slate-800/70 border-b border-slate-200 dark:border-slate-800">
+                  <th class="py-3 px-4 font-bold">Chi tiết Tệp / Creative / Asset</th>
+                  <th class="py-3 px-4 font-bold text-right">Spend ($)</th>
+                  <th class="py-3 px-4 font-bold text-right">GMV ($)</th>
+                  <th class="py-3 px-4 font-bold text-right">ROAS</th>
+                  <th class="py-3 px-4 font-bold text-right">CTR</th>
+                  <th class="py-3 px-4 font-bold text-right">Orders</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
+                ${list.length ? list.map((it) => {
+                  const roas = it.spend > 0 ? it.gmv / it.spend : 0;
+                  const ctr = it.imp > 0 ? (it.clicks / it.imp) * 100 : 0;
+                  return `
+                    <tr class="hover:bg-slate-50 dark:hover:bg-slate-800/40">
+                      <td class="py-3 px-4 min-w-[260px] max-w-[400px] whitespace-normal break-words">
+                        <div class="font-bold">${escapeHtml(it.name)}</div>
+                        <div class="text-[11px] text-slate-400 mt-0.5">${escapeHtml(it.camp)}</div>
+                      </td>
+                      <td class="py-3 px-4 text-right font-bold">$${it.spend.toFixed(2)}</td>
+                      <td class="py-3 px-4 text-right font-bold text-emerald-600">$${it.gmv.toFixed(2)}</td>
+                      <td class="py-3 px-4 text-right font-extrabold ${roas >= 2.5 ? 'text-emerald-600' : roas > 0 && roas < 1.8 ? 'text-rose-600' : ''}">${roas.toFixed(2)}x</td>
+                      <td class="py-3 px-4 text-right">${ctr.toFixed(2)}%</td>
+                      <td class="py-3 px-4 text-right font-semibold">${Math.round(it.conv)}</td>
+                    </tr>
+                  `;
+                }).join('') : '<tr><td colspan="6" class="py-8 text-center text-slate-400">Chưa có dữ liệu cho mục này.</td></tr>'}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      `;
+    }
+
+    function renderMasShopifyMix() {
+      const rows = (state.masSheetConfig?.deepdive?.Shopify_Orders || []).slice(1);
+      const ordersMap = {};
+      const prodStats = {};
+
+      rows.forEach((r) => {
+        const oid = String(r[1] || '').trim();
+        const title = String(r[6] || '').trim();
+        const qty = parseCsvNumber(r[7]);
+        const net = parseCsvNumber(r[8]);
+        const isLtv = String(r[11] || '').includes('LTV');
+        if (!oid || !title) return;
+
+        if (!prodStats[title]) prodStats[title] = { title, cacQty: 0, cacRev: 0, ltvQty: 0, ltvRev: 0 };
+        if (isLtv) {
+          prodStats[title].ltvQty += qty;
+          prodStats[title].ltvRev += net;
+        } else {
+          prodStats[title].cacQty += qty;
+          prodStats[title].cacRev += net;
+        }
+
+        if (!ordersMap[oid]) ordersMap[oid] = [];
+        if (!ordersMap[oid].includes(title)) ordersMap[oid].push(title);
+      });
+
+      const pairs = {};
+      Object.values(ordersMap).forEach((items) => {
+        if (items.length < 2) return;
+        items.sort();
+        for (let i = 0; i < items.length; i++) {
+          for (let j = i + 1; j < items.length; j++) {
+            const k = `${items[i]}|||${items[j]}`;
+            pairs[k] = (pairs[k] || 0) + 1;
+          }
+        }
+      });
+
+      const topPairs = Object.entries(pairs).sort((a, b) => b[1] - a[1]).slice(0, 20);
+      const topProds = Object.values(prodStats).sort((a, b) => (b.cacRev + b.ltvRev) - (a.cacRev + a.ltvRev)).slice(0, 20);
+
+      return `
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-5">
+          <div class="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 overflow-x-auto">
+            <div class="p-4 border-b border-slate-100 dark:border-slate-800 font-bold text-xs">Top Cặp Sản Phẩm Mua Cùng Nhau (Mix Cart)</div>
+            <table class="w-full text-left border-collapse text-xs">
+              <thead>
+                <tr class="bg-slate-50 dark:bg-slate-800/70 border-b border-slate-200 dark:border-slate-800">
+                  <th class="py-2.5 px-4 font-bold">Sản phẩm A</th>
+                  <th class="py-2.5 px-4 font-bold">Mua kèm Sản phẩm B</th>
+                  <th class="py-2.5 px-4 font-bold text-right">Số đơn</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
+                ${topPairs.length ? topPairs.map(([k, cnt]) => {
+                  const [a, b] = k.split('|||');
+                  return `
+                    <tr>
+                      <td class="py-2.5 px-4 font-semibold whitespace-normal break-words">${escapeHtml(a)}</td>
+                      <td class="py-2.5 px-4 font-semibold text-indigo-600 whitespace-normal break-words">+ ${escapeHtml(b)}</td>
+                      <td class="py-2.5 px-4 text-right font-extrabold">${cnt}</td>
+                    </tr>
+                  `;
+                }).join('') : '<tr><td colspan="3" class="py-6 text-center text-slate-400">Chưa đủ đơn đa sản phẩm.</td></tr>'}
+              </tbody>
+            </table>
+          </div>
+
+          <div class="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 overflow-x-auto">
+            <div class="p-4 border-b border-slate-100 dark:border-slate-800 font-bold text-xs">Top SKU theo CAC (Khách mới) vs LTV (Khách quay lại)</div>
+            <table class="w-full text-left border-collapse text-xs">
+              <thead>
+                <tr class="bg-slate-50 dark:bg-slate-800/70 border-b border-slate-200 dark:border-slate-800">
+                  <th class="py-2.5 px-4 font-bold">Product Title</th>
+                  <th class="py-2.5 px-4 font-bold text-right">CAC Rev ($)</th>
+                  <th class="py-2.5 px-4 font-bold text-right">LTV Rev ($)</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
+                ${topProds.length ? topProds.map((p) => `
+                  <tr>
+                    <td class="py-2.5 px-4 font-semibold whitespace-normal break-words">${escapeHtml(p.title)}</td>
+                    <td class="py-2.5 px-4 text-right font-bold text-sky-600">$${p.cacRev.toFixed(0)}</td>
+                    <td class="py-2.5 px-4 text-right font-bold text-emerald-600">$${p.ltvRev.toFixed(0)}</td>
+                  </tr>
+                `).join('') : '<tr><td colspan="3" class="py-6 text-center text-slate-400">Chưa có dữ liệu SKU.</td></tr>'}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      `;
+    }
+
+    function renderEco() {
+      return `
+        <div class="space-y-5">
+          <div class="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 overflow-x-auto">
+            <div class="p-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
+              <h2 class="text-sm font-bold">Eco Brand Tracking &amp; CIR Guardrail</h2>
+              <span class="text-xs text-slate-400">Tháng ${escapeHtml(state.ecoTrackingMonth || getCurrentMonthKey())}</span>
+            </div>
+            <table class="w-full text-left border-collapse text-xs">
+              <thead>
+                <tr class="bg-slate-50 dark:bg-slate-800/70 border-b border-slate-200 dark:border-slate-800">
+                  <th class="py-3 px-4 font-bold">Brand / Format</th>
+                  <th class="py-3 px-4 font-bold text-right">Target GMV</th>
+                  <th class="py-3 px-4 font-bold text-right">Actual Revenue</th>
+                  <th class="py-3 px-4 font-bold text-right">Spend</th>
+                  <th class="py-3 px-4 font-bold text-right">Actual CIR / Trần</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
+                ${(state.ecoTracking || []).map((row, idx) => {
+                  const cir = row.revenue > 0 ? (row.spend / row.revenue) * 100 : 0;
+                  const over = cir > row.maxCir;
+                  return `
+                    <tr>
+                      <td class="py-3 px-4 font-bold">${escapeHtml(row.brand)} <span class="text-slate-400 font-normal">(${escapeHtml(row.format)})</span></td>
+                      <td class="py-3 px-4 text-right font-semibold">${formatVnd(row.target)}</td>
+                      <td class="py-3 px-4 text-right">
+                        <input type="number" value="${row.revenue}" onchange="updateEcoRow(${idx}, 'revenue', this.value)" class="w-32 px-2 py-1 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-right font-bold" />
+                      </td>
+                      <td class="py-3 px-4 text-right">
+                        <input type="number" value="${row.spend}" onchange="updateEcoRow(${idx}, 'spend', this.value)" class="w-32 px-2 py-1 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-right font-bold" />
+                      </td>
+                      <td class="py-3 px-4 text-right font-extrabold ${over ? 'text-rose-600' : 'text-emerald-600'}">${cir.toFixed(1)}% / ${row.maxCir}%</td>
+                    </tr>
+                  `;
+                }).join('')}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      `;
+    }
+
+    function updateEcoRow(idx, field, val) {
+      if (!state.ecoTracking[idx]) return;
+      state.ecoTracking[idx][field] = Number(val) || 0;
+      saveState();
+      render();
+    }
+
+    function renderSchedule() {
+      const daysMap = { 0: 'Hàng ngày', 1: 'Thứ 2', 2: 'Thứ 3', 3: 'Thứ 4', 4: 'Thứ 5', 5: 'Thứ 6', 6: 'Thứ 7', 7: 'Chủ nhật' };
+      return `
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-5">
+          <div class="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200 dark:border-slate-800 space-y-4">
+            <div class="flex items-center justify-between">
+              <h2 class="text-sm font-bold">Time-Block Vận hành</h2>
+              <button onclick="openScheduleBlockModal()" class="px-3 py-1.5 rounded-xl bg-indigo-600 text-white text-xs font-semibold">+ Thêm khung giờ</button>
+            </div>
+            <div class="divide-y divide-slate-100 dark:divide-slate-800">
+              ${(state.scheduleBlocks || []).map((b) => `
+                <div class="py-3 flex items-center justify-between gap-2">
+                  <div>
+                    <div class="text-xs font-bold">${escapeHtml(b.title)}</div>
+                    <div class="text-[11px] text-slate-400">${daysMap[b.day] || 'Hàng ngày'} • ${escapeHtml(b.time)}</div>
+                  </div>
+                  <div class="flex items-center gap-1.5">
+                    <span class="px-2 py-0.5 rounded-md text-[10px] font-bold ${b.project === 'MAS' ? 'bg-indigo-100 text-indigo-700' : 'bg-emerald-100 text-emerald-700'}">${escapeHtml(b.project)}</span>
+                    <button onclick="openScheduleBlockModal('${b.id}')" class="p-1 text-slate-400 hover:text-indigo-600"><i data-lucide="pencil" class="w-3.5 h-3.5"></i></button>
+                    <button onclick="deleteScheduleBlock('${b.id}')" class="p-1 text-slate-400 hover:text-rose-600"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button>
+                  </div>
+                </div>
+              `).join('')}
+            </div>
+          </div>
+
+          <div class="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200 dark:border-slate-800 space-y-4">
+            <div class="flex items-center justify-between">
+              <h2 class="text-sm font-bold">Checklist lặp lại</h2>
+              <div class="flex items-center gap-1.5">
+                <button onclick="resetRecurringChecklist()" class="px-2.5 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 text-xs font-semibold">Reset tích</button>
+                <button onclick="openRecurringModal()" class="px-3 py-1.5 rounded-xl bg-emerald-600 text-white text-xs font-semibold">+ Thêm mục</button>
+              </div>
+            </div>
+            <div class="divide-y divide-slate-100 dark:divide-slate-800">
+              ${(state.recurringTasks || []).map((rt) => `
+                <div class="py-3 flex items-center justify-between gap-2">
+                  <label class="flex items-center gap-2.5 cursor-pointer">
+                    <input type="checkbox" ${rt.done ? 'checked' : ''} onchange="toggleRecurringDone('${rt.id}')" class="w-4 h-4 rounded accent-emerald-600" />
+                    <span class="text-xs font-medium ${rt.done ? 'line-through text-slate-400' : ''}">${escapeHtml(rt.title)}</span>
+                  </label>
+                  <div class="flex items-center gap-1.5">
+                    <span class="text-[11px] text-slate-400">${escapeHtml(rt.schedule)}</span>
+                    <button onclick="openRecurringModal('${rt.id}')" class="p-1 text-slate-400 hover:text-indigo-600"><i data-lucide="pencil" class="w-3.5 h-3.5"></i></button>
+                    <button onclick="deleteRecurringItem('${rt.id}')" class="p-1 text-slate-400 hover:text-rose-600"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button>
+                  </div>
+                </div>
+              `).join('')}
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    function openScheduleBlockModal(id) {
+      const item = (state.scheduleBlocks || []).find((x) => x.id === id) || { id: '', day: 0, project: 'MAS', time: '09:00 - 11:00', title: '' };
+      openModal(`
+        <form onsubmit="saveScheduleBlock(event, '${item.id}')" class="space-y-3">
+          <h3 class="text-sm font-bold">${item.id ? 'Sửa Time-Block' : 'Thêm Time-Block'}</h3>
+          <div class="grid grid-cols-2 gap-2">
+            <select id="sb-day" class="px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-xs">
+              ${[0,1,2,3,4,5,6,7].map((d) => `<option value="${d}" ${Number(item.day) === d ? 'selected' : ''}>${d === 0 ? 'Hàng ngày' : d === 7 ? 'Chủ nhật' : 'Thứ ' + (d + 1)}</option>`).join('')}
+            </select>
+            <select id="sb-proj" class="px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-xs">
+              <option value="MAS" ${item.project === 'MAS' ? 'selected' : ''}>MAS</option>
+              <option value="Eco" ${item.project === 'Eco' ? 'selected' : ''}>Eco</option>
+            </select>
+          </div>
+          <input id="sb-time" type="text" required value="${escapeHtml(item.time)}" placeholder="09:00 - 11:00" class="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-xs" />
+          <input id="sb-title" type="text" required value="${escapeHtml(item.title)}" placeholder="Nội dung công việc..." class="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-xs" />
+          <div class="flex justify-end gap-2 pt-2">
+            <button type="button" onclick="closeModal()" class="px-3 py-2 rounded-xl border text-xs">Hủy</button>
+            <button type="submit" class="px-4 py-2 rounded-xl bg-indigo-600 text-white text-xs font-semibold">Lưu</button>
+          </div>
+        </form>
+      `);
+    }
+
+    function saveScheduleBlock(e, id) {
+      e.preventDefault();
+      const obj = {
+        id: id || ('sb_' + Date.now()),
+        day: Number(document.getElementById('sb-day').value),
+        project: document.getElementById('sb-proj').value,
+        time: document.getElementById('sb-time').value.trim(),
+        title: document.getElementById('sb-title').value.trim()
+      };
+      if (id) {
+        state.scheduleBlocks = state.scheduleBlocks.map((x) => (x.id === id ? obj : x));
+      } else {
+        state.scheduleBlocks.push(obj);
+      }
+      saveState();
+      closeModal();
+      render();
+    }
+
+    function deleteScheduleBlock(id) {
+      state.scheduleBlocks = (state.scheduleBlocks || []).filter((x) => x.id !== id);
+      saveState();
+      render();
+    }
+
+    function openRecurringModal(id) {
+      const item = (state.recurringTasks || []).find((x) => x.id === id) || { id: '', title: '', schedule: 'Hàng ngày', done: false };
+      openModal(`
+        <form onsubmit="saveRecurringItem(event, '${item.id}')" class="space-y-3">
+          <h3 class="text-sm font-bold">${item.id ? 'Sửa Checklist' : 'Thêm Checklist'}</h3>
+          <input id="rt-title" type="text" required value="${escapeHtml(item.title)}" placeholder="Tên checklist..." class="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-xs" />
+          <input id="rt-sched" type="text" required value="${escapeHtml(item.schedule)}" placeholder="Hàng ngày / Thứ 2 hàng tuần" class="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-xs" />
+          <div class="flex justify-end gap-2 pt-2">
+            <button type="button" onclick="closeModal()" class="px-3 py-2 rounded-xl border text-xs">Hủy</button>
+            <button type="submit" class="px-4 py-2 rounded-xl bg-emerald-600 text-white text-xs font-semibold">Lưu</button>
+          </div>
+        </form>
+      `);
+    }
+
+    function saveRecurringItem(e, id) {
+      e.preventDefault();
+      const obj = {
+        id: id || ('rt_' + Date.now()),
+        title: document.getElementById('rt-title').value.trim(),
+        schedule: document.getElementById('rt-sched').value.trim(),
+        done: false
+      };
+      if (id) {
+        state.recurringTasks = state.recurringTasks.map((x) => (x.id === id ? { ...x, title: obj.title, schedule: obj.schedule } : x));
+      } else {
+        state.recurringTasks.push(obj);
+      }
+      saveState();
+      closeModal();
+      render();
+    }
+
+    function deleteRecurringItem(id) {
+      state.recurringTasks = (state.recurringTasks || []).filter((x) => x.id !== id);
+      saveState();
+      render();
+    }
+
+    function toggleRecurringDone(id) {
+      state.recurringTasks = (state.recurringTasks || []).map((x) => (x.id === id ? { ...x, done: !x.done } : x));
+      saveState();
+      render();
+    }
+
+    function resetRecurringChecklist() {
+      state.recurringTasks = (state.recurringTasks || []).map((x) => ({ ...x, done: false }));
+      saveState();
+      render();
+    }
+
+    function openQuickTaskModal() {
+      openModal(`
+        <form onsubmit="submitQuickTask(event)" class="space-y-3">
+          <h3 class="text-sm font-bold">Thêm Task mới</h3>
+          <input id="qt-title" type="text" required placeholder="Nội dung công việc..." class="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-xs" />
+          <div class="grid grid-cols-2 gap-2">
+            <select id="qt-project" class="px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-xs">
+              <option value="MAS">MAS</option>
+              <option value="Eco">Eco</option>
+            </select>
+            <input id="qt-due" type="date" value="${offsetDate(0)}" class="px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-xs" />
+          </div>
+          <div class="flex justify-end gap-2 pt-2">
+            <button type="button" onclick="closeModal()" class="px-3 py-2 rounded-xl border text-xs">Hủy</button>
+            <button type="submit" class="px-4 py-2 rounded-xl bg-indigo-600 text-white text-xs font-semibold">Tạo Task</button>
+          </div>
+        </form>
+      `);
+    }
+
+    function submitQuickTask(e) {
+      e.preventDefault();
+      const title = document.getElementById('qt-title').value.trim();
+      if (!title) return;
+      state.tasks.unshift({
+        id: 't_' + Date.now(),
+        title,
+        project: document.getElementById('qt-project').value,
+        due: document.getElementById('qt-due').value,
+        done: false
+      });
+      saveState();
+      closeModal();
+      render();
+    }
+
+    function toggleTaskDone(id) {
+      state.tasks = (state.tasks || []).map((t) => (t.id === id ? { ...t, done: !t.done } : t));
+      saveState();
+      render();
+    }
+
+    function buildReportText(scope = 'mas') {
+      const today = offsetDate(0);
+      const masPart = [
+        `📊 REPORT MAS (${today})`,
+        `• Paid Spend (L7D): ${getSummaryMetric('Total Paid Ads Spend', 3)}`,
+        `• Shopify GMV (L7D): ${getSummaryMetric('Total Shopify GMV', 3)}`,
+        `• Blended MER (L7D): ${getSummaryMetric('Blended ROAS / MER', 3)}`,
+        `• Orders (L7D): ${getSummaryMetric('Total Shopify Orders', 3)} (CAC: ${getSummaryMetric('Đơn khách mới', 3)} | LTV: ${getSummaryMetric('Đơn khách quay lại', 3)})`,
+        `• Tasks MAS: ${(state.tasks || []).filter((t) => !t.done && t.project === 'MAS').map((t) => t.title).join('; ') || 'Hoàn tất'}`
+      ].join('\n');
+
+      const ecoPart = [
+        `🛍️ REPORT ECO (${today})`,
+        ...(state.ecoTracking || []).map((r) => {
+          const cir = r.revenue > 0 ? ((r.spend / r.revenue) * 100).toFixed(1) : '0.0';
+          return `• ${r.brand} (${r.format}): Rev ${formatVnd(r.revenue)} / Target ${formatVnd(r.target)} | CIR ${cir}% (Trần ${r.maxCir}%)`;
+        }),
+        `• Tasks Eco: ${(state.tasks || []).filter((t) => !t.done && t.project === 'Eco').map((t) => t.title).join('; ') || 'Hoàn tất'}`
+      ].join('\n');
+
+      if (scope === 'mas') return masPart;
+      if (scope === 'eco') return ecoPart;
+      return `${masPart}\n\n${ecoPart}`;
+    }
+
+    function openReportModal(scope) {
+      const sc = scope || (state.activeTab === 'eco' ? 'eco' : 'mas');
+      const txt = buildReportText(sc);
+      openModal(`
+        <div class="space-y-3">
+          <div class="flex items-center justify-between">
+            <h3 class="text-sm font-bold">1-Click Daily Report</h3>
+            <button onclick="closeModal()" class="p-1"><i data-lucide="x" class="w-4 h-4"></i></button>
+          </div>
+          <div class="flex gap-1.5">
+            <button onclick="openReportModal('mas')" class="px-3 py-1.5 rounded-xl text-xs font-semibold ${sc === 'mas' ? 'bg-indigo-600 text-white' : 'bg-slate-100 dark:bg-slate-800'}">Report MAS</button>
+            <button onclick="openReportModal('eco')" class="px-3 py-1.5 rounded-xl text-xs font-semibold ${sc === 'eco' ? 'bg-emerald-600 text-white' : 'bg-slate-100 dark:bg-slate-800'}">Report Eco</button>
+            <button onclick="openReportModal('all')" class="px-3 py-1.5 rounded-xl text-xs font-semibold ${sc === 'all' ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900' : 'bg-slate-100 dark:bg-slate-800'}">Tổng hợp cả 2</button>
+          </div>
+          <textarea id="report-textarea" rows="10" class="w-full p-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-xs font-mono">${escapeHtml(txt)}</textarea>
+          <div class="flex justify-end">
+            <button onclick="copyReportText()" class="px-4 py-2 rounded-xl bg-indigo-600 text-white text-xs font-semibold">Copy Report</button>
+          </div>
+        </div>
+      `);
+    }
+
+    function copyReportText() {
+      const ta = document.getElementById('report-textarea');
+      if (!ta) return;
+      ta.select();
+      document.execCommand('copy');
+      showToast('Đã copy nội dung báo cáo!', 'success');
+    }
+
+    // =========================================================================
+    // 5. INITIALIZATION
+    // =========================================================================
+    window.onload = function () {
+      applyTheme();
+      renderAuthGate();
+      render();
+      if (isSessionUnlocked && state.masSheetConfig?.webAppUrl && Date.now() - lastAutoPullTs > 5 * 60 * 1000) {
+        lastAutoPullTs = Date.now();
+        syncMasFromGoogleSheet(true);
+      }
+      document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'visible' && isSessionUnlocked && state.masSheetConfig?.webAppUrl) {
+          if (Date.now() - lastAutoPullTs > 5 * 60 * 1000) {
+            lastAutoPullTs = Date.now();
+            syncMasFromGoogleSheet(true);
+          }
+        }
+      });
+    };
+  </script>
+</body>
+</html>
